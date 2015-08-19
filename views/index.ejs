@@ -4,12 +4,43 @@
 		<title>WebRTC Profile Picture</title>
 	</head>
 	<body>
-		<video autoplay></video>
+		<p><button id="takeProfilePicture" type="button" autofocus="true">Create Profile Picture</button></p>
+		<video id="videoTag" autoplay></video>
+		<canvas id="profilePicCanvas" style="display: none;"></canvas>
+		<div>
+			<img id="profilePictureOutput">
+		</div>
 		
 		<script>
+			// Taking a Profile Pic with WebRTC
+			// Based on an example from the Mozilla Developer Network
+			// https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Taking_still_photos
+			
+			var profilePicCanvas = document.querySelector("#profilePicCanvas");
+			var profilePictureOutput = document.querySelector("#profilePictureOutput");
+			var takePicButton = document.querySelector("#takeProfilePicture");
+			var videoTag = document.querySelector("#videoTag");
+			var width = 240;    // Desired width of the profile picture
+			var height = 0;     // Calculated later based on ratio
+			var streaming = false;  // Used to determine the video has loaded
+			
+			takePicButton.addEventListener('click', function(ev){
+		    	takeProfilePic();
+		    	ev.preventDefault();
+		    }, false);
+		
 			navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 			
-			var constraints = {audio: false, video: true};
+			var constraints = {
+				audio: false, 
+				video: true,
+				mandatory: {
+					minWidth: 240,
+					maxWidth: 240,
+					minHeight: 240,
+					maxHeight: 240
+				},
+			};
 			
 			var videoArea = document.querySelector("video");
 			
@@ -24,6 +55,37 @@
 			function onError(error) {
 				console.log("Error with getUserMedia: ", error);
 			}
+			
+			function takeProfilePic() {
+				var context = profilePicCanvas.getContext('2d');
+				if (width && height) {
+					profilePicCanvas.width = width;
+					profilePicCanvas.height = height;
+					context.drawImage(videoTag, 0, 0, width, height);
+
+					var data = profilePicCanvas.toDataURL('image/png');
+					profilePictureOutput.setAttribute('src', data);
+				}
+			}
+			
+			videoTag.addEventListener('canplay', function(ev){
+				if (!streaming) {
+					height = videoTag.videoHeight / (videoTag.videoWidth/width);
+					
+						// Firefox currently has a bug where the height can't be read from
+						// the video, so we will make assumptions if this happens.
+
+						if (isNaN(height)) {
+							height = width / (4/3);
+						}
+					
+						videoTag.setAttribute('width', width);
+						videoTag.setAttribute('height', height);
+						profilePicCanvas.setAttribute('width', width);
+						profilePicCanvas.setAttribute('height', height);
+						streaming = true;
+				}
+			}, false);
 			
 		</script>
 	</body>
